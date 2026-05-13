@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Luxury Bot Manager</title>
+    <style>
+        :root {
+            --primary: #000000; /* Pure Black for elegance */
+            --primary-text: #ffffff;
+            --bg: #ffffff;
+            --surface: #ffffff;
+            --text: #111111;
+            --text-sec: #666666;
+            --border: #e0e0e0;
+            --gray-light: #f5f5f5;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+        body { margin: 0; padding: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; }
+
+        /* HEADER */
+        header {
+            background: var(--bg); padding: 18px 15px; text-align: center;
+            font-weight: 300; letter-spacing: 1px; text-transform: uppercase; font-size: 0.9rem;
+            border-bottom: 1px solid var(--border); z-index: 10; flex-shrink: 0;
+        }
+
+        /* MAIN CONTENT */
+        main { flex: 1; overflow-y: auto; padding: 15px 15px 80px 15px; position: relative; }
+        .section { display: none; }
+        .section.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* CARDS - Minimalist Style */
+        .card {
+            background: var(--surface); padding: 20px; border-radius: 0;
+            margin-bottom: 1px; border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+            transition: background 0.2s;
+        }
+        .card:active { background: var(--gray-light); }
+       
+        .card-info { flex: 1; }
+        .card-title { font-weight: 500; color: var(--text); margin-bottom: 4px; font-size: 1rem; }
+        .card-desc { font-size: 0.85rem; color: var(--text-sec); line-height: 1.4; }
+        .card-meta { font-size: 0.8rem; color: var(--text); margin-top: 6px; font-weight: 600; letter-spacing: 0.5px; }
+        .btn-action { background: none; border: none; font-size: 1.1rem; color: var(--text-sec); padding: 15px; cursor: pointer; }
+
+        /* FLOATING ADD BUTTON - Black Circle */
+        .fab {
+            position: fixed; bottom: 80px; right: 20px;
+            background: var(--primary); color: var(--primary-text);
+            width: 50px; height: 50px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.8rem; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 5; border: none; cursor: pointer;
+        }
+
+        /* POPUP / MODAL EDITOR */
+        #editorModal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg); z-index: 50;
+            display: none; flex-direction: column;
+            animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        #editorModal.open { display: flex; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+        .modal-header { padding: 15px; background: var(--bg); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+        .modal-title { font-weight: 600; text-transform: uppercase; letter-spacing: 1px; font-size: 0.9rem; }
+        .modal-body { flex: 1; padding: 25px 20px; overflow-y: auto; background: var(--gray-light); }
+        .modal-footer { padding: 15px; background: var(--bg); border-top: 1px solid var(--border); }
+
+        /* FORM ELEMENTS - Minimalist */
+        .form-group { margin-bottom: 20px; }
+        .form-label { display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-sec); margin-bottom: 8px; font-weight: 600; }
+        .form-input {
+            width: 100%; padding: 14px; border: 1px solid var(--border); border-radius: 0; font-size: 1rem; background: white;
+            -webkit-appearance: none; /* Remove iOS styling */
+        }
+        .form-input:focus { border-color: var(--primary); }
+       
+        textarea.form-input { min-height: 100px; resize: vertical; line-height: 1.5; }
+
+        /* BUTTONS */
+        .btn { width: 100%; padding: 15px; border: none; border-radius: 0; font-weight: 500; font-size: 0.9rem; cursor: pointer; letter-spacing: 0.5px; text-transform: uppercase; }
+        .btn-primary { background: var(--primary); color: var(--primary-text); }
+        .btn-text { background: transparent; color: var(--text-sec); width: auto; padding: 0 15px; text-transform: none; font-size: 0.9rem; }
+
+        /* CHAT */
+        .chat-box { background: white; height: 60vh; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--border); }
+        .chat-area { flex: 1; padding: 15px; overflow-y: auto; background: var(--gray-light); display: flex; flex-direction: column; gap: 12px; }
+       
+        .bubble { padding: 12px 16px; border-radius: 2px; max-width: 80%; font-size: 0.95rem; line-height: 1.5; }
+        /* Bot: Black background, White text */
+        .bubble.bot { background: var(--primary); color: var(--primary-text); align-self: flex-start; }
+        /* User: Light Gray background, Black text */
+        .bubble.user { background: #e5e5e5; color: var(--text); align-self: flex-end; }
+       
+        .chat-input { padding: 10px; border-top: 1px solid var(--border); display: flex; gap: 10px; background: white; }
+
+        /* NAV BAR - Minimalist Bottom Bar */
+        nav { position: fixed; bottom: 0; width: 100%; background: var(--bg); display: flex; justify-content: space-around; padding: 12px 0; border-top: 1px solid var(--border); z-index: 20; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: #999; font-size: 0.65rem; background: none; border: none; letter-spacing: 0.5px; text-transform: uppercase; }
+        .nav-item.active { color: var(--text); }
+        .nav-icon { font-size: 1.4rem; margin-bottom: 4px; }
+
+        pre { background: #111; color: #fff; padding: 15px; border-radius: 2px; overflow-x: auto; font-size: 0.7rem; white-space: pre-wrap; font-family: 'Courier New', monospace; }
+    </style>
+</head>
+<body>
+
+    <header>Bot Manager</header>
+
+    <main>
+        <!-- TAB 1: SERVICES -->
+        <div id="tab-services" class="section active">
+            <div id="serviceList"></div>
+            <div id="emptyState" style="text-align:center; padding: 50px 20px; color:#bbb; font-style:italic; display:none;">No services available.</div>
+        </div>
+
+        <!-- TAB 2: SETTINGS -->
+        <div id="tab-settings" class="section">
+            <div class="card" style="display:block; border:1px solid var(--border);">
+                <div class="form-group">
+                    <label class="form-label">Telegram Bot Token</label>
+                    <input type="text" id="tgToken" class="form-input" placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">OpenAI / Groq API Key</label>
+                    <input type="text" id="llmKey" class="form-input" placeholder="sk-proj-...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Business Name</label>
+                    <input type="text" id="salonName" class="form-input" value="The Luxe Salon">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Bot Personality</label>
+                    <textarea id="systemPrompt" class="form-input" rows="6">You are a polite and professional concierge for a luxury salon.
+Greet guests warmly.
+Answer casually but elegantly.
+If asked about prices, refer to the service list.
+Always offer to book an appointment if the guest is interested.</textarea>
+                </div>
+                <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+            </div>
+        </div>
+
+        <!-- TAB 3: TEST -->
+        <div id="tab-test" class="section">
+            <div class="chat-box">
+                <div class="chat-area" id="chatArea">
+                    <div class="bubble bot">Hello! Welcome to The Luxe Salon. How may I assist you today?</div>
+                </div>
+                <div class="chat-input">
+                    <input type="text" id="userMsg" class="form-input" placeholder="Type a message..." onkeypress="if(event.key==='Enter') sendMsg()">
+                    <button class="btn-primary" style="width:auto; padding:0 20px;" onclick="sendMsg()">Send</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: DEPLOY -->
+        <div id="tab-deploy" class="section">
+            <div class="card" style="display:block; border:1px solid var(--border);">
+                <p style="font-size:0.85rem; color:#666; margin-bottom:15px; font-style:italic;">Copy this code into a file named <code>bot.py</code> on your server:</p>
+                <pre id="pythonCode">Click Generate to get code...</pre>
+                <button class="btn btn-primary" style="margin-top:15px;" onclick="generateCode()">Generate Code</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- FLOATING ACTION BUTTON -->
+    <button id="fabAdd" class="fab" onclick="openEditor()">+</button>
+
+    <!-- POPUP EDITOR -->
+    <div id="editorModal">
+        <div class="modal-header">
+            <button class="btn btn-text" onclick="closeEditor()">Cancel</button>
+            <span class="modal-title">Edit Service</span>
+            <button class="btn btn-text" style="color:var(--text); font-weight:600;" onclick="saveService()">Save</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="editIndex">
+           
+            <div class="form-group">
+                <label class="form-label">Service Name</label>
+                <input type="text" id="editName" class="form-input" placeholder="e.g. Signature Haircut">
+            </div>
+           
+            <div class="form-group">
+                <label class="form-label">Price (USD)</label>
+                <input type="number" id="editPrice" class="form-input" inputmode="decimal" placeholder="50">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea id="editDesc" class="form-input" placeholder="Brief description of the service..."></textarea>
+            </div>
+           
+            <button class="btn" style="background:#f0f0f0; color:#333; margin-top:30px; font-weight:600;" onclick="deleteCurrentService()">Delete Service</button>
+        </div>
+    </div>
+
+    <!-- NAV BAR -->
+    <nav>
+        <button class="nav-item active" onclick="switchTab('services', this)"><span class="nav-icon">✂️</span>Services</button>
+        <button class="nav-item" onclick="switchTab('settings', this)"><span class="nav-icon">⚙️</span>Config</button>
+        <button class="nav-item" onclick="switchTab('test', this)"><span class="nav-icon">💬</span>Test</button>
+        <button class="nav-item" onclick="switchTab('deploy', this)"><span class="nav-icon">🚀</span>Deploy</button>
+    </nav>
+
+    <script>
+        // --- DATA ---
+        let services = [
+            { name: "Classic Haircut", price: 45, desc: "Wash, precision cut, and styling." },
+            { name: "Beard Trim", price: 25, desc: "Shape-up and hot towel finish." },
+            { name: "Full Color", price: 120, desc: "Premium single-process color treatment." },
+            { name: "Manicure", price: 35, desc: "Classic manicure with hand massage." }
+        ];
+
+        let config = {
+            tgToken: '',
+            llmKey: '',
+            salonName: 'The Luxe Salon',
+            systemPrompt: ''
+        };
+
+        // --- NAVIGATION ---
+        function switchTab(tabId, btn) {
+            document.querySelectorAll('.section').forEach(e => e.classList.remove('active'));
+            document.getElementById('tab-'+tabId).classList.add('active');
+           
+            document.querySelectorAll('.nav-item').forEach(e => e.classList.remove('active'));
+            btn.classList.add('active');
+
+            // Show/Hide FAB
+            document.getElementById('fabAdd').style.display = (tabId === 'services') ? 'flex' : 'none';
+        }
+
+        // --- LIST RENDERING ---
+        function renderList() {
+            const container = document.getElementById('serviceList');
+            container.innerHTML = '';
+           
+            if(services.length === 0) {
+                document.getElementById('emptyState').style.display = 'block';
+            } else {
+                document.getElementById('emptyState').style.display = 'none';
+                services.forEach((s, i) => {
+                    const div = document.createElement('div');
+                    div.className = 'card';
+                    div.onclick = () => openEditor(i);
+                    div.innerHTML = `
+                        <div class="card-info">
+                            <div class="card-title">${s.name}</div>
+                            <div class="card-desc">${s.desc || '-'}</div>
+                            <div class="card-meta">$${parseFloat(s.price).toFixed(2)}</div>
+                        </div>
+                        <button class="btn-action">✎</button>
+                    `;
+                    container.appendChild(div);
+                });
+            }
+        }
+
+        // --- POPUP EDITOR LOGIC ---
+        function openEditor(index = null) {
+            const modal = document.getElementById('editorModal');
+            const idxInput = document.getElementById('editIndex');
+           
+            if (index !== null) {
+                // Edit existing
+                idxInput.value = index;
+                document.getElementById('editName').value = services[index].name;
+                document.getElementById('editPrice').value = services[index].price;
+                document.getElementById('editDesc').value = services[index].desc;
+            } else {
+                // Add new
+                idxInput.value = "-1";
+                document.getElementById('editName').value = "";
+                document.getElementById('editPrice').value = "";
+                document.getElementById('editDesc').value = "";
+            }
+            modal.classList.add('open');
+        }
+
+        function closeEditor() {
+            document.getElementById('editorModal').classList.remove('open');
+        }
+
+        function saveService() {
+            const index = parseInt(document.getElementById('editIndex').value);
+            const name = document.getElementById('editName').value;
+            const price = document.getElementById('editPrice').value;
+            const desc = document.getElementById('editDesc').value;
+
+            if(!name) return alert("Service name is required!");
+
+            const newData = { name, price, desc };
+
+            if (index === -1) {
+                services.push(newData);
+            } else {
+                services[index] = newData;
+            }
+           
+            closeEditor();
+            renderList();
+        }
+
+        function deleteCurrentService() {
+            const index = parseInt(document.getElementById('editIndex').value);
+            if (index !== -1 && confirm("Delete this service?")) {
+                services.splice(index, 1);
+                closeEditor();
+                renderList();
+            }
+        }
+
+        // --- SETTINGS ---
+        function saveSettings() {
+            config.tgToken = document.getElementById('tgToken').value;
+            config.llmKey = document.getElementById('llmKey').value;
+            config.salonName = document.getElementById('salonName').value;
+            config.systemPrompt = document.getElementById('systemPrompt').value;
+            alert("Settings saved successfully.");
+        }
+
+        // --- CHAT TEST ---
+        async function sendMsg() {
+            const input = document.getElementById('userMsg');
+            const text = input.value.trim();
+            if(!text) return;
+
+            const area = document.getElementById('chatArea');
+            area.innerHTML += `<div class="bubble user">${text}</div>`;
+            input.value = '';
+            area.scrollTop = area.scrollHeight;
+
+            if(!config.llmKey) {
+                setTimeout(() => area.innerHTML += `<div class="bubble bot">Hello! (Please enter an API Key in the Config tab to test with real AI)</div>`, 500);
+                return;
+            }
+
+            // Real AI Call
+            const prompt = `${config.systemPrompt}\n\nSERVICES LIST:\n${JSON.stringify(services)}`;
+            try {
+                const res = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.llmKey}` },
+                    body: JSON.stringify({ model: 'gpt-3.5-turbo', messages: [{role:"system", content:prompt}, {role:"user", content:text}] })
+                });
+                const data = await res.json();
+                if(data.choices[0]) {
+                    area.innerHTML += `<div class="bubble bot">${data.choices[0].message.content}</div>`;
+                    area.scrollTop = area.scrollHeight;
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        // --- PYTHON CODE GENERATOR ---
+        function generateCode() {
+            let srvStr = "[";
+            services.forEach(s => srvStr += `{"name":"${s.name}","price":${s.price},"desc":"${s.desc}"},`);
+            srvStr += "]";
+           
+            document.getElementById('pythonCode').textContent = `
+import logging
+from telegram import Update
+from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
+from openai import OpenAI
+
+# --- CONFIGURATION ---
+TOKEN = "${config.tgToken}"
+API_KEY = "${config.llmKey}"
+BUSINESS_NAME = "${config.salonName}"
+
+# --- DATA ---
+SERVICES = ${srvStr}
+
+# --- PROMPT ---
+PROMPT = """${config.systemPrompt}
+
+Available Services:
+ ${JSON.stringify(services)}"""
+
+client = OpenAI(api_key=API_KEY)
+
+async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_message = update.message.text
+    try:
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": PROMPT},
+                {"role": "user", "content": user_message}
+            ]
+        )
+        reply = response.choices[0].message.content
+        await update.message.reply_text(reply)
+    except Exception as e:
+        await update.message.reply_text("Apologies, our system is busy right now. Please try again later.")
+        print(e)
+
+if __name__ == '__main__':
+    app = ApplicationBuilder().token(TOKEN).build()
+    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle))
+    app.run_polling()
+            `.trim();
+        }
+
+        // Init
+        renderList();
+    </script>
+</body>
+</html>
